@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home | MedScan AI</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Three.js for 3D Background -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        background: '#0f172a',
+                        surface: '#1e293b',
+                        primary: '#38bdf8',
+                        secondary: '#64748b',
+                        accent: '#8b5cf6',
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 3s infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* 3D Tilt Card Styles */
+        .glass-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+            border: 1px solid rgba(56, 189, 248, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s ease-out, box-shadow 0.3s ease; /* Fast transform for tilt */
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+        
+        /* Glowing Text Effect */
+        .nav-glow {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .nav-glow:hover {
+            color: #38bdf8;
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 
+                         0 0 20px rgba(56, 189, 248, 0.4);
+        }
+
+        /* FAQ Accordion */
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+        details[open] summary ~ * {
+            animation: sweep .5s ease-in-out;
+        }
+        @keyframes sweep {
+            0%    {opacity: 0; margin-top: -10px}
+            100%  {opacity: 1; margin-top: 0px}
+        }
+
+        /* Scroll Reveal Animation Classes */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Staggered Delays for Grid Items */
+        .reveal-delay-100 { transition-delay: 0.1s; }
+        .reveal-delay-200 { transition-delay: 0.2s; }
+        .reveal-delay-300 { transition-delay: 0.3s; }
+
+        .stat-counter {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- 3D BACKGROUND CONTAINER -->
+    <div id="canvas-container" class="fixed inset-0 w-full h-full -z-10 pointer-events-none"></div>
+
+    <!-- NAVIGATION -->
+    <nav class="fixed w-full z-50 glass border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="home.html" class="flex items-center gap-2 cursor-pointer group">
+                    <i data-lucide="activity" class="text-primary w-8 h-8 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] transition-all"></i>
+                    <span class="font-bold text-xl tracking-tight text-white group-hover:text-shadow-glow">MedScan<span class="text-primary">.AI</span></span>
+                </a>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="home.html" class="nav-glow text-sm font-medium text-white">Home</a>
+                        <!-- Protected Link -->
+                        <button onclick="window.handleProtectedNavigation()" class="nav-glow text-sm font-medium text-gray-300 bg-transparent border-none cursor-pointer">Analyze Report</button>
+                        <a href="contact.html" class="nav-glow text-sm font-medium text-gray-300">About & Contact</a>
+                        
+                        <!-- Dynamic Login Button -->
+                        <a id="auth-btn" href="login.html" class="bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white hover:shadow-[0_0_15px_rgba(56,189,248,0.5)] px-4 py-2 rounded-full text-sm font-medium transition-all">
+                            Login
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-grow pt-24 relative overflow-hidden">
+        
+        <!-- Subtle CSS Glows to complement 3D -->
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl -z-10 opacity-20 pointer-events-none animate-float"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl -z-10 opacity-20 pointer-events-none animate-float-delayed"></div>
+
+        <!-- HERO SECTION -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 text-center">
+            <div class="mt-8 sm:mt-12">
+                <div class="opacity-0 animate-[fadeInUp_0.8s_ease-out_forwards]">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 mb-6 backdrop-blur-sm">
+                        <span class="flex w-2 h-2 bg-primary rounded-full mr-2 animate-pulse"></span>
+                        Gemini 2.5 Flash Enabled
+                    </span>
+                </div>
+                
+                <h1 class="text-5xl tracking-tight font-extrabold text-white sm:text-6xl md:text-7xl mb-6 opacity-0 animate-[fadeInUp_0.8s_ease-out_0.2s_forwards]">
+                    <span class="block">Understand your health</span>
+                    <span class="block text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">in seconds</span>
+                </h1>
+                
+                <p class="mt-4 max-w-2xl mx-auto text-lg text-gray-400 opacity-0 animate-[fadeInUp_0.8s_ease-out_0.4s_forwards]">
+                    Don't let medical jargon confuse you. Upload your lab reports and get instant, easy-to-understand summaries powered by advanced AI.
+                </p>
+                
+                <div class="mt-10 max-w-sm mx-auto sm:max-w-none sm:flex sm:justify-center gap-4 opacity-0 animate-[fadeInUp_0.8s_ease-out_0.6s_forwards]">
+                    <button onclick="window.handleProtectedNavigation()" class="w-full flex items-center justify-center px-8 py-4 border border-transparent text-lg font-bold rounded-xl text-slate-900 bg-primary hover:bg-sky-400 transition-all shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(56,189,248,0.6)] transform hover:-translate-y-1">
+                        <i data-lucide="upload-cloud" class="w-5 h-5 mr-2"></i>
+                        Analyze Now
+                    </button>
+                    <a href="#how-it-works" class="mt-3 w-full flex items-center justify-center px-8 py-4 border border-slate-600 text-lg font-medium rounded-xl text-white bg-transparent hover:bg-slate-800 transition-all hover:border-primary">
+                        How it Works
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- STATS BANNER -->
+        <section class="border-y border-slate-800 bg-slate-900/50 backdrop-blur-sm reveal">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div class="grid grid-cols-2 gap-8 md:grid-cols-4 text-center">
+                    <div>
+                        <!-- Updated to 15s -->
+                        <div class="text-3xl font-bold text-white mb-1 stat-counter" data-target="15" data-suffix="s">0</div>
+                        <div class="text-sm text-slate-400 uppercase tracking-wide">Processing Time</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1 stat-counter" data-target="98" data-suffix="%">0</div>
+                        <div class="text-sm text-slate-400 uppercase tracking-wide">Accuracy</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1 stat-counter" data-target="24" data-suffix="/7">0</div>
+                        <div class="text-sm text-slate-400 uppercase tracking-wide">Availability</div>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1">Secure</div>
+                        <div class="text-sm text-slate-400 uppercase tracking-wide">Local Processing</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FEATURES GRID -->
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+            <div class="text-center mb-16 reveal">
+                <h2 class="text-3xl font-bold text-white mb-4">Why use MedScan AI?</h2>
+                <p class="text-slate-400">Complex medical data turned into clear, actionable insights.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-8 sm:grid-cols-3">
+                <div class="glass-card p-8 rounded-2xl text-left group tilt-card reveal reveal-delay-100">
+                    <div class="w-14 h-14 bg-primary/20 rounded-xl flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform transform translate-z-10">
+                        <i data-lucide="zap" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3 transform translate-z-10">Instant Summaries</h3>
+                    <p class="text-gray-400 leading-relaxed transform translate-z-10">Get a concise overview of your 20-page report in seconds. We filter out the noise and focus on what matters.</p>
+                </div>
+                <div class="glass-card p-8 rounded-2xl text-left group tilt-card reveal reveal-delay-200">
+                    <div class="w-14 h-14 bg-accent/20 rounded-xl flex items-center justify-center mb-6 text-accent group-hover:scale-110 transition-transform transform translate-z-10">
+                        <i data-lucide="shield-check" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3 transform translate-z-10">Jargon Buster</h3>
+                    <p class="text-gray-400 leading-relaxed transform translate-z-10">Don't know what "Neutrophils" are? We highlight complex terms and explain them like you're 10 years old.</p>
+                </div>
+                <div class="glass-card p-8 rounded-2xl text-left group tilt-card reveal reveal-delay-300">
+                    <div class="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center mb-6 text-green-400 group-hover:scale-110 transition-transform transform translate-z-10">
+                        <i data-lucide="activity" class="w-7 h-7"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-3 transform translate-z-10">Actionable Steps</h3>
+                    <p class="text-gray-400 leading-relaxed transform translate-z-10">We provide a list of clear questions to ask your doctor, empowering you to take control of your next visit.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- HOW IT WORKS SECTION -->
+        <section id="how-it-works" class="bg-surface/50 py-24 relative overflow-hidden reveal">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <span class="text-primary font-semibold tracking-wider uppercase text-sm">Workflow</span>
+                    <h2 class="text-3xl font-bold text-white mt-2">How it works</h2>
+                </div>
+
+                <div class="relative grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Connecting Line (Desktop) -->
+                    <div class="hidden md:block absolute top-12 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-slate-700 to-transparent z-0"></div>
+
+                    <!-- Step 1 -->
+                    <div class="relative z-10 text-center reveal reveal-delay-100">
+                        <div class="w-24 h-24 mx-auto bg-slate-800 rounded-full border-4 border-slate-900 flex items-center justify-center mb-6 shadow-xl relative group hover:scale-110 transition-transform">
+                            <i data-lucide="file-up" class="w-10 h-10 text-primary"></i>
+                            <div class="absolute -top-2 -right-2 w-8 h-8 bg-primary text-slate-900 font-bold rounded-full flex items-center justify-center border-4 border-slate-900">1</div>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">Upload Report</h3>
+                        <p class="text-slate-400 px-4">Drag & drop your medical PDF or image securely.</p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="relative z-10 text-center reveal reveal-delay-200">
+                        <div class="w-24 h-24 mx-auto bg-slate-800 rounded-full border-4 border-slate-900 flex items-center justify-center mb-6 shadow-xl relative group hover:scale-110 transition-transform">
+                            <i data-lucide="cpu" class="w-10 h-10 text-accent"></i>
+                            <div class="absolute -top-2 -right-2 w-8 h-8 bg-accent text-white font-bold rounded-full flex items-center justify-center border-4 border-slate-900">2</div>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">AI Analysis</h3>
+                        <p class="text-slate-400 px-4">Gemini AI extracts text, identifies vitals, and flags issues.</p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="relative z-10 text-center reveal reveal-delay-300">
+                        <div class="w-24 h-24 mx-auto bg-slate-800 rounded-full border-4 border-slate-900 flex items-center justify-center mb-6 shadow-xl relative group hover:scale-110 transition-transform">
+                            <i data-lucide="check-circle" class="w-10 h-10 text-green-400"></i>
+                            <div class="absolute -top-2 -right-2 w-8 h-8 bg-green-400 text-slate-900 font-bold rounded-full flex items-center justify-center border-4 border-slate-900">3</div>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-2">View Dashboard</h3>
+                        <p class="text-slate-400 px-4">See your simplified summary and personal health dashboard.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ SECTION -->
+        <section class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-24 reveal">
+            <h2 class="text-3xl font-bold text-white text-center mb-12">Frequently Asked Questions</h2>
+            <div class="space-y-4">
+                
+                <details class="glass-card rounded-xl p-4 cursor-pointer group">
+                    <summary class="flex items-center justify-between font-medium text-white">
+                        <span>Is my medical data safe?</span>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-400 leading-relaxed pl-2 border-l-2 border-primary/30">
+                        Yes. We process images locally in your browser session before sending them to the secure AI endpoint. We do not store your medical reports on our servers.
+                    </p>
+                </details>
+
+                <details class="glass-card rounded-xl p-4 cursor-pointer group">
+                    <summary class="flex items-center justify-between font-medium text-white">
+                        <span>Can it read handwritten doctor notes?</span>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-400 leading-relaxed pl-2 border-l-2 border-primary/30">
+                        Our AI is trained on handwriting recognition (OCR) and can interpret legible doctor's notes, prescriptions, and comments with high accuracy.
+                    </p>
+                </details>
+
+                <details class="glass-card rounded-xl p-4 cursor-pointer group">
+                    <summary class="flex items-center justify-between font-medium text-white">
+                        <span>Is this a replacement for my doctor?</span>
+                        <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <p class="mt-4 text-slate-400 leading-relaxed pl-2 border-l-2 border-primary/30">
+                        No. MedScan AI is an informational tool to help you understand your reports. Always consult a certified medical professional for diagnosis and treatment.
+                    </p>
+                </details>
+
+            </div>
+        </section>
+
+        <!-- CTA SECTION -->
+        <section class="pb-20 px-4 reveal">
+            <div class="max-w-5xl mx-auto bg-gradient-to-r from-primary/20 to-accent/20 border border-white/10 rounded-3xl p-12 text-center relative overflow-hidden hover:shadow-[0_0_50px_rgba(56,189,248,0.2)] transition-shadow duration-500">
+                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-primary/30 rounded-full blur-3xl opacity-50"></div>
+                
+                <h2 class="text-3xl font-bold text-white mb-6 relative z-10">Ready to decode your health?</h2>
+                <p class="text-lg text-slate-300 mb-8 max-w-2xl mx-auto relative z-10">Join thousands of users who are taking control of their medical information today.</p>
+                
+                <button onclick="window.handleProtectedNavigation()" class="relative z-10 px-8 py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-200 transition-colors shadow-lg transform hover:-translate-y-1">
+                    Get Started for Free
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="glass border-t border-slate-800 mt-auto">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center gap-2 mb-4 md:mb-0">
+                    <i data-lucide="activity" class="text-slate-600 w-6 h-6"></i>
+                    <span class="text-slate-500 font-semibold">MedScan.AI</span>
+                </div>
+                <div class="text-slate-600 text-sm">
+                    &copy; 2024 MedScan AI. All rights reserved.
+                </div>
+                <div class="flex gap-6 mt-4 md:mt-0 text-slate-600">
+                    <a href="#" class="hover:text-primary transition-colors"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                    <a href="#" class="hover:text-primary transition-colors"><i data-lucide="github" class="w-5 h-5"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- THREE.JS SCENE SETUP -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Create Floating Particles (Small Smooth Spheres)
+            const geometry = new THREE.SphereGeometry(0.2, 32, 32); 
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x38bdf8, // Tailwind Primary Color
+                shininess: 100,
+                transparent: true,
+                opacity: 0.2
+            });
+            
+            const group = new THREE.Group();
+            scene.add(group);
+
+            // High Density Particle Cloud
+            const particleCount = 400; 
+            const width = 10; // Infinity loop width
+
+            for (let i = 0; i < particleCount; i++) {
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                // Distribute evenly along the curve
+                const t = (i / particleCount) * Math.PI * 2;
+                
+                mesh.userData = {
+                    t: t, 
+                    speed: 0.0015,
+                    // Random noise for "cloud" volume
+                    randomOffset: {
+                        x: (Math.random() - 0.5) * 1.0,
+                        y: (Math.random() - 0.5) * 1.0,
+                        z: (Math.random() - 0.5) * 2
+                    },
+                    // Random rotation for each sphere (less visible for spheres but keeps logic generic)
+                    rotSpeed: {
+                        x: (Math.random() - 0.5) * 0.02,
+                        y: (Math.random() - 0.5) * 0.02,
+                        z: (Math.random() - 0.5) * 0.02
+                    }
+                };
+                
+                // Variation in size
+                const scaleVar = Math.random() * 0.5 + 0.5;
+                mesh.scale.setScalar(scaleVar);
+                
+                group.add(mesh);
+            }
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xffffff, 1);
+            pointLight.position.set(10, 10, 20);
+            scene.add(pointLight);
+            
+            const accentLight = new THREE.PointLight(0x8b5cf6, 0.8); // Purple Accent
+            accentLight.position.set(-10, -10, 10);
+            scene.add(accentLight);
+
+            // Animation Loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                group.children.forEach(mesh => {
+                    // Move along curve
+                    mesh.userData.t += mesh.userData.speed;
+                    const t = mesh.userData.t;
+                    
+                    const scale = width;
+                    const denom = 1 + Math.sin(t) * Math.sin(t);
+                    
+                    // Lemniscate of Bernoulli formula
+                    const x = (scale * Math.cos(t)) / denom;
+                    const y = (scale * Math.sin(t) * Math.cos(t)) / denom;
+                    
+                    mesh.position.x = x + mesh.userData.randomOffset.x;
+                    mesh.position.y = y + mesh.userData.randomOffset.y;
+                    
+                    // Background Position
+                    mesh.position.z = 20 + mesh.userData.randomOffset.z + Math.sin(t * 2) * 2; 
+
+                    // Rotate individual spheres
+                    mesh.rotation.x += mesh.userData.rotSpeed.x;
+                    mesh.rotation.y += mesh.userData.rotSpeed.y;
+                    mesh.rotation.z += mesh.userData.rotSpeed.z;
+                });
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+
+            // Resize Handling
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        });
+    </script>
+
+    <!-- INTERACTION LOGIC (Scroll Reveal, Counters, Tilt) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyCXKUXTncKpX_eZOi2CLjSHsMKmTDbsdro",
+          authDomain: "medscan-ai-d8aca.firebaseapp.com",
+          projectId: "medscan-ai-d8aca",
+          storageBucket: "medscan-ai-d8aca.firebasestorage.app",
+          messagingSenderId: "268656020420",
+          appId: "1:268656020420:web:1fa116f03d17c9f335f291"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        let currentUser = null;
+
+        // --- AUTH ---
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            updateUI(user);
+        });
+
+        function updateUI(user) {
+            const authBtn = document.getElementById('auth-btn');
+            if (user) {
+                authBtn.textContent = "Logout";
+                authBtn.href = "#";
+                authBtn.classList.add('bg-red-500/10', 'text-red-400', 'border-red-500/20');
+                authBtn.classList.remove('bg-primary/10', 'text-primary', 'border-primary/20');
+                authBtn.onclick = (e) => {
+                    e.preventDefault();
+                    signOut(auth).then(() => { window.location.reload(); });
+                };
+            } else {
+                authBtn.textContent = "Login";
+                authBtn.href = "login.html";
+                authBtn.classList.remove('bg-red-500/10', 'text-red-400', 'border-red-500/20');
+                authBtn.classList.add('bg-primary/10', 'text-primary', 'border-primary/20');
+                authBtn.onclick = null;
+            }
+        }
+
+        window.handleProtectedNavigation = function() {
+            if (currentUser) {
+                window.location.href = 'report.html';
+            } else {
+                window.location.href = 'login.html';
+            }
+        };
+
+        // --- 1. SCROLL REVEAL ANIMATION ---
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                    
+                    // If this section contains counters, start them
+                    const counters = entry.target.querySelectorAll('.stat-counter');
+                    if (counters.length > 0) {
+                        counters.forEach(startCounter);
+                    }
+
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // --- 2. NUMBER COUNTER ANIMATION ---
+        function startCounter(counter) {
+            const target = +counter.getAttribute('data-target');
+            const suffix = counter.getAttribute('data-suffix') || '';
+            const duration = 1500; // 1.5s animation
+            const increment = target / (duration / 16); // 60fps
+            
+            let current = 0;
+            const updateCount = () => {
+                current += increment;
+                if (current < target) {
+                    counter.innerText = Math.ceil(current) + suffix;
+                    requestAnimationFrame(updateCount);
+                } else {
+                    counter.innerText = target + suffix;
+                }
+            };
+            updateCount();
+        }
+
+        // --- 3. 3D TILT EFFECT ---
+        document.querySelectorAll('.tilt-card').forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Calculate rotation based on cursor position relative to center
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const rotateX = ((y - centerY) / centerY) * -10; // Max 10deg rotation
+                const rotateY = ((x - centerX) / centerX) * 10;
+                
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
+            });
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>

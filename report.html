@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Report Analysis | MedScan AI</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        background: '#0f172a',
+                        surface: '#1e293b',
+                        primary: '#38bdf8',
+                        secondary: '#64748b',
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 2s linear infinite',
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { top: '0%' },
+                            '100%': { top: '100%' }
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; overflow-x: hidden; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glass-card { background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9)); border: 1px solid rgba(56, 189, 248, 0.1); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5); }
+        
+        .nav-glow { transition: all 0.3s ease; }
+        .nav-glow:hover { color: #38bdf8; text-shadow: 0 0 10px rgba(56, 189, 248, 0.8); }
+
+        /* Markdown Styles for Cards */
+        .markdown-prose { overflow-wrap: break-word; word-break: break-word; }
+        .markdown-prose h2 { display: none; } /* Hide H2 as it becomes the card title */
+        .markdown-prose h3 { font-size: 1.1rem; font-weight: 600; margin-top: 0.5rem; margin-bottom: 0.5rem; color: #e2e8f0; }
+        .markdown-prose p { margin-bottom: 0.8rem; line-height: 1.6; color: #cbd5e1; font-size: 0.95rem; }
+        .markdown-prose ul { list-style-type: none; padding-left: 0; margin-bottom: 0.5rem; }
+        .markdown-prose ul li { position: relative; padding-left: 1.2rem; margin-bottom: 0.4rem; color: #cbd5e1; font-size: 0.95rem; }
+        .markdown-prose ul li::before { content: "•"; color: #38bdf8; position: absolute; left: 0; font-weight: bold; }
+        .markdown-prose strong { color: #38bdf8; font-weight: 600; }
+        .markdown-prose blockquote { border-left: 3px solid #ef4444; padding-left: 0.8rem; margin: 1rem 0; font-style: italic; color: #fca5a5; background: rgba(239, 68, 68, 0.1); padding: 0.8rem; border-radius: 0 0.5rem 0.5rem 0; font-size: 0.9rem; }
+
+        /* Chat Styles */
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background-color: rgba(100, 116, 139, 0.5); border-radius: 20px; }
+
+        /* Audio Wave Animation */
+        .bar { width: 3px; background: #38bdf8; animation: sound 0ms -800ms linear infinite alternate; margin: 0 1px; border-radius: 2px; }
+        .bar:nth-child(1) { height: 8px; animation-duration: 474ms; }
+        .bar:nth-child(2) { height: 12px; animation-duration: 433ms; }
+        .bar:nth-child(3) { height: 16px; animation-duration: 407ms; }
+        .bar:nth-child(4) { height: 10px; animation-duration: 458ms; }
+        .playing .bar { animation-name: sound; }
+        @keyframes sound { 0% { opacity: .35; height: 3px; } 100% { opacity: 1; height: 15px; } }
+
+        /* Gauges */
+        .gauge-bar {
+            background: linear-gradient(90deg, #ef4444 0%, #ef4444 15%, #fbbf24 15%, #fbbf24 30%, #22c55e 30%, #22c55e 70%, #fbbf24 70%, #fbbf24 85%, #ef4444 85%, #ef4444 100%);
+        }
+
+        /* Dashboard Block Styles */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        .info-block {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .info-block:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            background: rgba(30, 41, 59, 0.6);
+        }
+        
+        /* Attention Block Style */
+        .info-block.attention-needed {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.05);
+        }
+        .info-block.attention-needed:hover {
+            border-color: rgba(239, 68, 68, 0.6);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .info-block-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .info-block-icon {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            background: rgba(56, 189, 248, 0.1);
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .info-block-title {
+            font-weight: 700;
+            color: #fff;
+            font-size: 1.1rem;
+        }
+
+        /* Print Styles */
+        @media print {
+            body { background-color: white !important; color: black !important; }
+            .no-print, nav, aside, footer, #drop-zone, #chat-interface, .glass-card { display: none !important; box-shadow: none !important; border: none !important; background: none !important; }
+            #result-container, #ai-output { display: block !important; width: 100% !important; margin: 0 !important; padding: 0 !important; color: black !important; }
+            .dashboard-grid { display: block !important; }
+            .info-block { border: 1px solid #ccc !important; margin-bottom: 20px !important; break-inside: avoid !important; background: none !important; box-shadow: none !important; color: black !important; }
+            .markdown-prose p, .markdown-prose li, .info-block-title { color: black !important; }
+            .print-only { display: block !important; }
+            .gauge-visual { display: none !important; }
+        }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-[100] hidden no-print">
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeSettings()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl">
+            <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="settings" class="w-5 h-5 text-primary"></i> Settings
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-400 mb-1">Google Gemini API Key</label>
+                    <p class="text-xs text-slate-500 mb-2">Required if not running in a configured environment.</p>
+                    <input type="password" id="settings-api-key" placeholder="AIzaSy..." 
+                        class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white text-sm focus:border-primary focus:outline-none">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="closeSettings()" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors">Cancel</button>
+                <button onclick="saveSettings()" class="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-sky-400 transition-colors shadow-lg shadow-sky-500/20">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="fixed w-full z-50 glass border-b border-slate-800 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="home.html" class="flex items-center gap-2 cursor-pointer">
+                    <i data-lucide="activity" class="text-primary w-8 h-8"></i>
+                    <span class="font-bold text-xl tracking-tight text-white">MedScan<span class="text-primary">.AI</span></span>
+                </a>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="home.html" class="nav-glow text-sm font-medium text-gray-300 hover:text-white">Home</a>
+                        <a href="report.html" class="nav-glow text-sm font-medium text-white border-b-2 border-primary pb-1">Analyze Report</a>
+                        <a href="contact.html" class="nav-glow text-sm font-medium text-gray-300 hover:text-white">About & Contact</a>
+                        <a href="#" onclick="handleLogout()" class="nav-glow text-sm font-medium text-red-400 hover:text-red-300">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN LAYOUT: Split Screen -->
+    <main class="flex-grow pt-24 pb-12 px-4 sm:px-6 relative overflow-hidden flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto w-full">
+        
+        <!-- Background Elements -->
+        <div class="absolute top-0 right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl -z-10 opacity-20 pointer-events-none no-print"></div>
+
+        <!-- LEFT SIDEBAR: Patient Dashboard -->
+        <aside class="w-full lg:w-80 shrink-0 space-y-6 no-print">
+            <div class="glass-card p-6 rounded-2xl sticky top-24">
+                
+                <!-- Profile Header -->
+                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-700">
+                    <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-primary shadow-[0_0_15px_rgba(56,189,248,0.3)]">
+                        <i data-lucide="user" class="w-8 h-8 text-primary"></i>
+                    </div>
+                    <div>
+                        <h3 id="profile-name" class="font-bold text-white text-lg">Loading...</h3>
+                        <p id="profile-id" class="text-slate-400 text-xs font-mono">ID: ...</p>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/10 text-green-400 mt-1">
+                            Active Patient
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Vitals / Info Grid -->
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Age</p>
+                            <p id="profile-age" class="text-white font-semibold text-sm">--</p>
+                        </div>
+                        <div class="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Blood</p>
+                            <p id="profile-blood" class="text-white font-semibold text-sm">--</p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Last Visit</p>
+                            <i data-lucide="calendar" class="w-3 h-3 text-slate-500"></i>
+                        </div>
+                        <p class="text-white font-semibold text-sm">Oct 24, 2024</p>
+                    </div>
+
+                    <div class="p-3 bg-slate-900/50 rounded-lg border border-red-900/30">
+                        <div class="flex justify-between items-center mb-1">
+                            <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Allergies</p>
+                            <i data-lucide="alert-triangle" class="w-3 h-3 text-red-400"></i>
+                        </div>
+                        <div id="profile-allergies" class="flex flex-wrap gap-2">
+                            <span class="text-xs text-slate-500 italic">No allergies recorded</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mt-8 pt-6 border-t border-slate-700">
+                    <p class="text-xs text-slate-500 mb-3 font-semibold uppercase">Quick Actions</p>
+                    <button class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-sm mb-1">
+                        <i data-lucide="history" class="w-4 h-4"></i> History Logs
+                    </button>
+                    <button onclick="openSettings()" class="w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors text-sm">
+                        <i data-lucide="settings" class="w-4 h-4"></i> Settings
+                    </button>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- RIGHT MAIN AREA: Analysis Tool -->
+        <section class="flex-grow min-w-0">
+            <!-- Print Header -->
+            <div class="print-only mb-8">
+                <h1 class="text-3xl font-bold text-black mb-2">Medical Analysis Report</h1>
+                <p class="text-gray-600">Generated by MedScan AI</p>
+                <hr class="my-4 border-gray-300">
+            </div>
+
+            <div class="glass-card rounded-2xl overflow-hidden shadow-2xl h-full flex flex-col">
+                <!-- Header -->
+                <div class="px-6 py-8 border-b border-slate-700 bg-slate-800/50 shrink-0 no-print">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white flex items-center">
+                                <i data-lucide="microscope" class="w-6 h-6 mr-2 text-primary"></i>
+                                Report Analysis
+                            </h2>
+                            <p class="mt-1 text-slate-400 text-sm">Upload new medical documents for AI processing.</p>
+                        </div>
+                        <div class="hidden sm:block flex items-center gap-4">
+                            <!-- Risk Badge Container -->
+                            <div id="risk-badge-container" class="hidden mr-2"></div>
+                            
+                            <span class="px-3 py-1 rounded-full text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20 flex items-center gap-2">
+                                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                System Online (Gemini 2.5)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 md:p-8 space-y-8 flex-grow overflow-y-auto scrollbar-thin">
+                    
+                    <!-- Drag & Drop Zone -->
+                    <div id="drop-zone" class="no-print relative group border-2 border-dashed border-slate-600 rounded-xl p-12 text-center hover:border-primary hover:bg-slate-800/50 transition-all cursor-pointer overflow-hidden">
+                        <input type="file" id="file-upload" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" accept="image/*">
+                        
+                        <!-- Initial State -->
+                        <div id="upload-prompt" class="flex flex-col items-center justify-center pt-5 pb-6 transition-opacity duration-300">
+                            <div class="w-20 h-20 bg-slate-700/50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform group-hover:bg-slate-700">
+                                <i data-lucide="upload-cloud" class="w-10 h-10 text-gray-400 group-hover:text-primary transition-colors"></i>
+                            </div>
+                            <p class="mb-2 text-xl text-gray-300 font-medium">Drop report here or click to upload</p>
+                            <p class="text-xs text-gray-500">Supports PNG, JPG, JPEG (Max 10MB)</p>
+                        </div>
+
+                        <!-- Preview State -->
+                        <div id="file-preview-container" class="hidden relative w-full max-w-md mx-auto z-10">
+                            <div class="relative rounded-lg overflow-hidden shadow-2xl border border-slate-700 bg-black">
+                                <img id="image-preview" class="w-full h-auto object-contain max-h-[400px]" src="" alt="Preview">
+                                <!-- Scanning Overlay -->
+                                <div id="scan-overlay" class="absolute inset-0 bg-primary/10 hidden pointer-events-none">
+                                    <div class="absolute w-full h-1 bg-primary/80 shadow-[0_0_20px_rgba(56,189,248,1)] animate-scan"></div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-3 bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-700">
+                                <p id="filename-display" class="text-xs text-gray-300 font-mono truncate max-w-[200px]"></p>
+                                <button onclick="clearFile(event)" class="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 z-30 relative">
+                                    <i data-lucide="trash-2" class="w-3 h-3"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <button id="analyze-btn" onclick="analyzeReport()" class="no-print w-full bg-gradient-to-r from-primary to-blue-600 text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-sky-500/20 transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed group">
+                        <span id="btn-text" class="flex items-center justify-center gap-2 text-lg">
+                            <i data-lucide="sparkles" class="w-5 h-5 group-hover:animate-pulse"></i> Generate Medical Summary
+                        </span>
+                        <span id="btn-loader" class="hidden flex items-center justify-center gap-3">
+                            <i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> 
+                            <span id="loader-text">Analyzing...</span>
+                        </span>
+                    </button>
+
+                    <!-- Results Section -->
+                    <div id="result-container" class="hidden space-y-4">
+                        <div class="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-700 pb-4">
+                            <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                                <i data-lucide="file-check" class="text-green-400 w-5 h-5"></i>
+                                Analysis Results
+                            </h3>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <!-- Audio Controls -->
+                                <div id="audio-controls" class="hidden flex items-center gap-1 bg-slate-800 rounded-full px-2 py-1 border border-slate-600">
+                                    <div class="flex items-end gap-[2px] h-3 px-1 mr-1" id="audio-viz">
+                                        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                                    </div>
+                                    <button onclick="toggleAudio()" id="btn-play-pause" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-700 text-white transition-colors">
+                                        <i data-lucide="pause" class="w-3 h-3"></i>
+                                    </button>
+                                    <button onclick="stopAudio()" class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-700 text-red-400 transition-colors">
+                                        <i data-lucide="square" class="w-3 h-3 fill-current"></i>
+                                    </button>
+                                </div>
+
+                                <button onclick="initAudio()" id="btn-init-read" class="text-xs font-bold bg-purple-600/20 text-purple-300 hover:bg-purple-600 hover:text-white px-3 py-2 rounded-full transition-all border border-purple-500/30 flex items-center gap-1.5">
+                                    <i data-lucide="volume-2" class="w-3 h-3"></i> Read Aloud
+                                </button>
+                                
+                                <div class="h-4 w-px bg-slate-700 mx-1"></div>
+                                
+                                <button onclick="window.print()" class="text-xs font-medium bg-slate-700 hover:bg-slate-600 text-gray-300 px-3 py-2 rounded-full transition-all border border-slate-600 flex items-center gap-1">
+                                    <i data-lucide="printer" class="w-3 h-3"></i> Print
+                                </button>
+
+                                <!-- Updated Mode Toggle Buttons -->
+                                <button onclick="refineResult('patient')" class="text-xs font-medium bg-slate-700 hover:bg-primary hover:text-white text-gray-300 px-4 py-2 rounded-full transition-all border border-slate-600 flex items-center gap-1">
+                                    <i data-lucide="user" class="w-3 h-3"></i> Patient Mode
+                                </button>
+                                <button onclick="refineResult('doctor')" class="text-xs font-medium bg-slate-700 hover:bg-primary hover:text-white text-gray-300 px-4 py-2 rounded-full transition-all border border-slate-600 flex items-center gap-1">
+                                    <i data-lucide="stethoscope" class="w-3 h-3"></i> Doctor Mode
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- VISUAL GAUGES CONTAINER -->
+                        <div id="gauges-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <!-- Dynamic Gauges will be injected here -->
+                        </div>
+
+                        <!-- BLOCK LAYOUT CONTAINER -->
+                        <div id="ai-output" class="relative z-10 dashboard-grid pb-6">
+                            <!-- Content will be injected here by renderVisuals -->
+                            <div class="col-span-full flex flex-col items-center justify-center h-64 text-center text-slate-500">
+                                <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                                    <i data-lucide="file-text" class="w-8 h-8 text-primary opacity-50"></i>
+                                </div>
+                                <h3 class="text-lg font-semibold text-slate-400">Ready to Analyze</h3>
+                                <p class="text-sm mt-1 max-w-xs mx-auto">Upload a medical report to see your detailed AI breakdown here.</p>
+                            </div>
+                        </div>
+
+                        <!-- Chat Interface -->
+                        <div class="mt-8 pt-6 border-t border-slate-700 no-print">
+                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                <i data-lucide="message-square" class="text-primary w-5 h-5"></i>
+                                Ask Follow-up Questions
+                            </h3>
+                            <div id="chat-interface" class="bg-slate-900/50 rounded-xl border border-slate-700 overflow-hidden">
+                                <div id="chat-history" class="h-80 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
+                                            <i data-lucide="bot" class="w-5 h-5 text-primary"></i>
+                                        </div>
+                                        <div class="bg-slate-800 rounded-lg rounded-tl-none p-3 text-sm text-slate-300 shadow-sm border border-slate-700/50">
+                                            I've analyzed your report. Feel free to ask me anything about the findings!
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="dynamic-prompts-container" class="hidden px-4 pb-2 pt-2 bg-slate-800/30 border-t border-slate-700/50">
+                                    <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2 flex items-center gap-1">
+                                        <i data-lucide="sparkles" class="w-3 h-3 text-primary"></i> Suggested Questions
+                                    </p>
+                                    <div id="suggested-questions" class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                                    </div>
+                                </div>
+
+                                <div class="p-4 bg-slate-800/50 border-t border-slate-700 flex gap-2 relative">
+                                    <input type="text" id="chat-input" placeholder="Type your question..." 
+                                        class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary text-sm shadow-inner"
+                                        onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                                    <button onclick="sendChatMessage()" id="chat-send-btn" class="bg-primary hover:bg-sky-400 text-white p-2 px-4 rounded-lg transition-colors shadow-lg shadow-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i data-lucide="send" class="w-5 h-5"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-xs text-center text-slate-500 flex items-center justify-center gap-1 mt-4">
+                            <i data-lucide="sparkles" class="w-3 h-3 text-primary"></i>
+                            Powered by Google Gemini 2.5 Flash. Not a substitute for professional medical advice.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="glass border-t border-slate-800 mt-auto shrink-0 no-print">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-slate-500 text-sm">
+            <p>&copy; 2024 MedScan AI. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Gemini API Configuration
+        const apiKey = ""; // API Key handled by environment
+
+        // Firebase Configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyCXKUXTncKpX_eZOi2CLjSHsMKmTDbsdro",
+          authDomain: "medscan-ai-d8aca.firebaseapp.com",
+          projectId: "medscan-ai-d8aca",
+          storageBucket: "medscan-ai-d8aca.firebasestorage.app",
+          messagingSenderId: "268656020420",
+          appId: "1:268656020420:web:1fa116f03d17c9f335f291"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'medscan-ai-d8aca';
+
+        // Patient Context
+        let patientContext = {
+            age: 'Unknown',
+            gender: 'Unknown',
+            allergies: 'None',
+            conditions: 'None'
+        };
+
+        // AUTHENTICATION & DATA FETCHING
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        document.getElementById('profile-name').textContent = data.fullName || user.displayName || "Patient";
+                        document.getElementById('profile-id').textContent = `ID: ${data.patientId || '#MS-XXXX'}`;
+                        document.getElementById('profile-age').textContent = data.age ? `${data.age} Yrs` : '--';
+                        document.getElementById('profile-blood').textContent = data.bloodType ? `${data.bloodType} Pos` : '--';
+                        
+                        // Populate Patient Context
+                        patientContext = {
+                            name: data.fullName || "Patient",
+                            age: data.age || 'Unknown',
+                            gender: 'Unknown', // Not currently collected
+                            bloodType: data.bloodType || 'Unknown',
+                            allergies: data.allergies || 'None',
+                            conditions: 'None recorded' // Placeholder until collected
+                        };
+
+                        const allergyContainer = document.getElementById('profile-allergies');
+                        if (data.allergies && data.allergies.trim() !== "") {
+                            allergyContainer.innerHTML = '';
+                            const list = data.allergies.split(',').map(s => s.trim());
+                            list.forEach(item => {
+                                const span = document.createElement('span');
+                                span.className = "text-xs bg-red-500/10 text-red-400 px-2 py-0.5 rounded border border-red-500/20";
+                                span.textContent = item;
+                                allergyContainer.appendChild(span);
+                            });
+                        }
+                    } else {
+                        document.getElementById('profile-name').textContent = user.displayName || "Patient";
+                    }
+                } catch (error) {
+                    console.error("Error fetching profile:", error);
+                }
+            } else {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // GLOBAL EXPORTS
+        window.handleLogout = () => {
+            signOut(auth).then(() => {
+                localStorage.removeItem('medscan_token');
+                window.location.href = 'login.html';
+            }).catch((error) => {
+                console.error("Logout error", error);
+            });
+        };
+
+        // UI LOGIC FOR FILE UPLOAD
+        lucide.createIcons();
+
+        const fileInput = document.getElementById('file-upload');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const previewContainer = document.getElementById('file-preview-container');
+        const imagePreview = document.getElementById('image-preview');
+        const filenameDisplay = document.getElementById('filename-display');
+        const dropZone = document.getElementById('drop-zone');
+        let currentBase64 = null;
+        let conversationHistory = []; // STORE CHAT HISTORY (Gemini Format)
+
+        // --- AUDIO GLOBAL STATE ---
+        let audioContext = null;
+        let audioSource = null;
+        let isAudioPlaying = false;
+
+        // --- SETTINGS MANAGEMENT ---
+        window.openSettings = () => {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            const savedKey = localStorage.getItem('medscan_api_key');
+            if (savedKey) document.getElementById('settings-api-key').value = savedKey;
+        };
+
+        window.closeSettings = () => {
+            document.getElementById('settings-modal').classList.add('hidden');
+        };
+
+        window.saveSettings = () => {
+            const key = document.getElementById('settings-api-key').value.trim();
+            if (key) {
+                localStorage.setItem('medscan_api_key', key);
+                alert("API Key saved securely to your browser.");
+                closeSettings();
+            } else {
+                alert("Please enter a valid API Key.");
+            }
+        };
+
+        function getEffectiveKey() {
+            return localStorage.getItem('medscan_api_key') || apiKey;
+        }
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-primary', 'bg-slate-800/80');
+        });
+
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-primary', 'bg-slate-800/80');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-primary', 'bg-slate-800/80');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) handleFile(file);
+        });
+
+        function handleFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentBase64 = e.target.result.split(',')[1];
+                imagePreview.src = e.target.result;
+                uploadPrompt.classList.add('hidden');
+                previewContainer.classList.remove('hidden');
+                filenameDisplay.textContent = file.name;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.clearFile = function(event) {
+            event.stopPropagation();
+            fileInput.value = '';
+            currentBase64 = null;
+            previewContainer.classList.add('hidden');
+            uploadPrompt.classList.remove('hidden');
+            document.getElementById('result-container').classList.add('hidden');
+            conversationHistory = []; 
+            stopAudio(); 
+        }
+
+        function updateLoaderText(text) {
+            const loaderText = document.getElementById('loader-text');
+            loaderText.style.opacity = '0';
+            setTimeout(() => {
+                loaderText.textContent = text;
+                loaderText.style.opacity = '1';
+            }, 200);
+        }
+
+        // --- NEW RENDERING LOGIC: MASONRY BLOCKS + RISK BADGE ---
+        
+        function renderVisuals(markdownText) {
+            const outputDiv = document.getElementById('ai-output');
+            const gaugesContainer = document.getElementById('gauges-container');
+            const riskBadgeContainer = document.getElementById('risk-badge-container');
+            
+            // 1. Extract JSON block if present
+            let jsonBlock = null;
+            const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+            const match = markdownText.match(jsonRegex);
+            
+            let cleanMarkdown = markdownText;
+
+            if (match) {
+                try {
+                    jsonBlock = JSON.parse(match[1]);
+                    cleanMarkdown = markdownText.replace(jsonRegex, '');
+                } catch (e) {
+                    console.error("Failed to parse visual data JSON", e);
+                }
+            }
+
+            // 2. Detect Risk Level from Markdown text
+            let riskLevel = "Low";
+            if (cleanMarkdown.toLowerCase().includes("risk level: high") || cleanMarkdown.toLowerCase().includes("**risk level**: high")) {
+                riskLevel = "High";
+            } else if (cleanMarkdown.toLowerCase().includes("risk level: moderate") || cleanMarkdown.toLowerCase().includes("**risk level**: moderate")) {
+                riskLevel = "Moderate";
+            }
+
+            // Update Badge
+            if (riskLevel === "High") {
+                riskBadgeContainer.innerHTML = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">⚠️ High Risk</span>';
+            } else if (riskLevel === "Moderate") {
+                riskBadgeContainer.innerHTML = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">⚠️ Moderate Risk</span>';
+            } else {
+                riskBadgeContainer.innerHTML = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">✅ Low Risk</span>';
+            }
+            riskBadgeContainer.classList.remove('hidden');
+
+            // 3. Render Gauges
+            gaugesContainer.innerHTML = '';
+            if (jsonBlock && Array.isArray(jsonBlock)) {
+                jsonBlock.forEach(metric => {
+                    if (metric.label && metric.value) {
+                        const min = metric.min || 0;
+                        const max = metric.max || 100;
+                        const percentage = Math.min(Math.max(((metric.value - min) / (max - min)) * 100, 0), 100);
+                        
+                        const gauge = document.createElement('div');
+                        gauge.className = "bg-slate-800/50 border border-slate-700 rounded-lg p-4 gauge-visual";
+                        gauge.innerHTML = `
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-medium text-slate-200 text-sm">${metric.label}</span>
+                                <span class="font-bold text-white text-sm">${metric.value} <span class="text-slate-500 text-xs">${metric.unit || ''}</span></span>
+                            </div>
+                            <div class="relative h-2.5 w-full rounded-full bg-slate-700 gauge-bar">
+                                <div class="absolute top-0 bottom-0 w-1 bg-white border border-slate-900 shadow-md transform -translate-x-1/2" style="left: ${percentage}%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+                                <span>${min}</span>
+                                <span>${max}</span>
+                            </div>
+                        `;
+                        gaugesContainer.appendChild(gauge);
+                    }
+                });
+            }
+
+            // 4. Parse Markdown
+            const htmlContent = marked.parse(cleanMarkdown);
+            
+            // 5. Create Masonry Grid of Blocks
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlContent;
+            
+            outputDiv.innerHTML = ''; // Clear previous
+
+            const icons = {
+                'Summary': 'file-text',
+                'Findings': 'activity',
+                'Vitals': 'heart-pulse',
+                'Abnormalities': 'alert-triangle',
+                'Attention': 'alert-octagon',
+                'Risk': 'shield-alert',
+                'Flags': 'flag',
+                'Explain': 'brain-circuit',
+                'Questions': 'help-circle',
+                'Disclaimer': 'info'
+            };
+
+            Array.from(tempDiv.children).forEach((child) => {
+                if (child.tagName === 'H2') {
+                    // Start new block
+                    const title = child.innerText.replace(/^\d+\.\s*/, '');
+                    
+                    // Determine icon and special styling
+                    let iconName = 'info';
+                    let isAttention = false;
+                    
+                    for (const key in icons) {
+                        if (title.includes(key)) {
+                            iconName = icons[key];
+                            if (key === 'Attention' || key === 'Abnormalities' || key === 'Risk') {
+                                isAttention = true;
+                            }
+                            break;
+                        }
+                    }
+
+                    const block = document.createElement('div');
+                    block.className = `info-block markdown-prose ${isAttention ? 'attention-needed' : ''}`;
+                    block.innerHTML = `
+                        <div class="info-block-header">
+                            <div class="info-block-icon">
+                                <i data-lucide="${iconName}" class="w-5 h-5"></i>
+                            </div>
+                            <span class="info-block-title">${title}</span>
+                        </div>
+                        <div class="block-content"></div>
+                    `;
+                    
+                    outputDiv.appendChild(block);
+                } else if (outputDiv.lastElementChild && outputDiv.lastElementChild.classList.contains('info-block')) {
+                    // Append content to current block
+                    outputDiv.lastElementChild.querySelector('.block-content').appendChild(child);
+                } else {
+                    // Pre-header content
+                    if (child.textContent.trim() !== "") {
+                         const block = document.createElement('div');
+                         block.className = "info-block markdown-prose";
+                         block.appendChild(child);
+                         outputDiv.appendChild(block);
+                    }
+                }
+            });
+            
+            lucide.createIcons();
+        }
+
+        function extractAndRenderPrompts(markdownText) {
+            const container = document.getElementById('suggested-questions');
+            const wrapper = document.getElementById('dynamic-prompts-container');
+            container.innerHTML = ''; 
+
+            const sectionRegex = /##\s*5\.?.*Questions.*?Doctor[\s\S]*?(?=##|$)/i;
+            const match = markdownText.match(sectionRegex);
+
+            let questions = [];
+
+            if (match) {
+                const sectionText = match[0];
+                const bulletRegex = /[\*\-]\s+(.*)/g;
+                let bulletMatch;
+                while ((bulletMatch = bulletRegex.exec(sectionText)) !== null) {
+                    let cleanText = bulletMatch[1].replace(/\*\*/g, '').replace(/\*/g, '').trim();
+                    if (cleanText.length > 5) questions.push(cleanText);
+                }
+            }
+
+            if (questions.length === 0) {
+                questions = [
+                    "What does this diagnosis mean for my daily life?",
+                    "Are there any side effects to the suggested treatment?",
+                    "When should I schedule a follow-up?"
+                ];
+            }
+
+            questions.forEach(q => {
+                const displayQ = q.length > 50 ? q.substring(0, 50) + '...' : q;
+                const btn = document.createElement('button');
+                btn.className = "shrink-0 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white text-xs px-3 py-2 rounded-lg border border-slate-600 transition-colors text-left max-w-[200px] truncate";
+                btn.textContent = displayQ;
+                btn.title = q;
+                btn.onclick = () => {
+                    document.getElementById('chat-input').value = q;
+                    sendChatMessage();
+                };
+                container.appendChild(btn);
+            });
+
+            wrapper.classList.remove('hidden');
+        }
+
+        // --- GEMINI ANALYSIS LOGIC ---
+        window.analyzeReport = async function() {
+            const effectiveKey = getEffectiveKey();
+            if (!effectiveKey) {
+                alert("API Key missing. Please open Settings and enter your Gemini API Key.");
+                openSettings();
+                return;
+            }
+
+            const btnText = document.getElementById('btn-text');
+            const btnLoader = document.getElementById('btn-loader');
+            const resultContainer = document.getElementById('result-container');
+            const scanOverlay = document.getElementById('scan-overlay');
+            const analyzeBtn = document.getElementById('analyze-btn');
+
+            if (!currentBase64) {
+                alert("Please upload an image first.");
+                return;
+            }
+
+            btnText.classList.add('hidden');
+            btnLoader.classList.remove('hidden');
+            scanOverlay.classList.remove('hidden');
+            analyzeBtn.disabled = true;
+            resultContainer.classList.add('hidden'); 
+
+            const steps = ["Initializing Gemini 2.5 Flash...", "Scanning text blocks...", "Checking vital signs...", "Formulating summary..."];
+            let stepIndex = 0;
+            const interval = setInterval(() => {
+                if (stepIndex < steps.length) {
+                    updateLoaderText(steps[stepIndex]);
+                    stepIndex++;
+                }
+            }, 1200);
+
+            // Construct Context String
+            const contextString = `
+                Patient Profile:
+                - Name: ${patientContext.name}
+                - Age: ${patientContext.age}
+                - Blood Type: ${patientContext.bloodType}
+                - Allergies: ${patientContext.allergies}
+                - Existing Conditions: ${patientContext.conditions}
+            `;
+
+            // DEFAULT SYSTEM PROMPT (Patient Mode)
+            const promptText = `
+                You are an advanced clinical AI assistant analyzing a medical report. 
+                
+                ${contextString}
+
+                Interpret all findings relative to the patient’s profile above.
+                
+                **Analysis Guidelines:**
+                1. **Attention Needed:** Highlight abnormal values clearly.
+                2. **Risk Level:** Provide a simple risk level (Low / Moderate / High).
+                3. **Mode:** Use very simple language for Patient Mode (Default).
+                4. **Questions:** Generate 2–3 suggested questions the patient can ask their doctor.
+                5. **Confidence:** Include a confidence level with a brief reason.
+                6. **Language:** Maintain cautious medical language ("may indicate", "could suggest").
+                7. **Disclaimer:** End with a subtle disclaimer.
+
+                **OUTPUT FORMAT (Use Markdown with Sections):**
+                # 🏥 Medical Analysis Report
+
+                ## 1. Executive Summary
+                (Overview including Risk Level)
+
+                ## 2. ⚠️ Attention Needed
+                (List abnormal findings with context)
+
+                ## 3. 📊 Key Findings
+                (Normal findings and vitals)
+
+                ## 4. 🧠 Analysis (Patient Mode)
+                (Simple explanation)
+
+                ## 5. 📋 Questions for Doctor
+
+                ## 6. 🔍 Confidence & Disclaimer
+
+                **IMPORTANT:** At the very end of your response, strictly output a JSON block (wrapped in \`\`\`json) containing numerical data for up to 4 key vital signs or metrics found. If exact range is unknown, estimate standard medical range.
+                Format:
+                \`\`\`json
+                [
+                  {"label": "Hemoglobin", "value": 13.5, "unit": "g/dL", "min": 12, "max": 16},
+                  {"label": "WBC", "value": 11000, "unit": "/uL", "min": 4000, "max": 10000}
+                ]
+                \`\`\`
+            `;
+
+            try {
+                conversationHistory = [
+                    {
+                        role: "user",
+                        parts: [
+                            { text: promptText },
+                            { inlineData: { mimeType: "image/jpeg", data: currentBase64 } }
+                        ]
+                    }
+                ];
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${effectiveKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: conversationHistory
+                    })
+                });
+
+                if (!response.ok) {
+                    if (response.status === 403) throw new Error("403 Forbidden. Check Settings.");
+                    throw new Error(`Gemini API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const markdownText = data.candidates[0].content.parts[0].text;
+                
+                renderVisuals(markdownText);
+                resultContainer.classList.remove('hidden');
+                extractAndRenderPrompts(markdownText);
+
+                conversationHistory.push({
+                    role: "model",
+                    parts: [{ text: markdownText }]
+                });
+
+                document.getElementById('chat-history').innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
+                            <i data-lucide="bot" class="w-5 h-5 text-primary"></i>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg rounded-tl-none p-3 text-sm text-slate-300 shadow-sm border border-slate-700/50">
+                            I've analyzed your report. Feel free to ask me anything about the findings!
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+
+            } catch (error) {
+                console.error(error);
+                alert("Analysis failed. " + error.message);
+                if (error.message.includes("403")) openSettings();
+            } finally {
+                clearInterval(interval);
+                btnText.classList.remove('hidden');
+                btnLoader.classList.add('hidden');
+                scanOverlay.classList.add('hidden');
+                analyzeBtn.disabled = false;
+                updateLoaderText("Analyzing..."); 
+            }
+        };
+
+        window.refineResult = async function(type) {
+           const outputDiv = document.getElementById('ai-output');
+           const originalContent = outputDiv.innerHTML;
+           
+           // Mode Switching Logic
+           let instruction = "";
+           if (type === 'patient') {
+               instruction = "Rewrite the entire analysis in **Patient Mode**: Use simple, non-medical language, clear analogies, and empathetic tone. Keep the structure.";
+           } else if (type === 'doctor') {
+               instruction = "Rewrite the entire analysis in **Doctor Mode**: Use professional medical terminology, focus on clinical significance, pathophysiology, and precise metrics. Keep the structure.";
+           } else if (type === 'simple') {
+               instruction = "Simplify the language even further for a layperson.";
+           } else if (type === 'detailed') {
+               instruction = "Add more medical details and explanations.";
+           } else if (type === 'spanish') {
+               instruction = "Translate the entire report to Spanish.";
+           }
+
+           // Visual Feedback for update
+           outputDiv.innerHTML = '<div class="flex items-center justify-center h-40 gap-2 text-primary animate-pulse"><i data-lucide="refresh-cw" class="w-6 h-6 animate-spin"></i> Updating View...</div>';
+           lucide.createIcons();
+
+           try {
+               const effectiveKey = getEffectiveKey();
+               
+               // Use a new chat message to refine the output
+               const refineResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${effectiveKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [
+                            ...conversationHistory, // Include history context
+                            { role: "user", parts: [{ text: instruction }] }
+                        ]
+                    })
+                });
+
+                if (!refineResponse.ok) throw new Error("Refine Failed");
+
+                const data = await refineResponse.json();
+                const newMarkdown = data.candidates[0].content.parts[0].text;
+                
+                // Re-render
+                renderVisuals(newMarkdown);
+                extractAndRenderPrompts(newMarkdown);
+                
+                // Update history
+                conversationHistory.push({ role: "user", parts: [{ text: instruction }] });
+                conversationHistory.push({ role: "model", parts: [{ text: newMarkdown }] });
+
+           } catch (e) {
+               console.error(e);
+               outputDiv.innerHTML = originalContent; // Restore on fail
+               alert("Failed to update mode.");
+           }
+        };
+
+        // --- GEMINI CHAT FUNCTIONALITY ---
+        window.sendChatMessage = async function() {
+            const effectiveKey = getEffectiveKey();
+            if (!effectiveKey) {
+                alert("API Key missing. Please check Settings.");
+                return;
+            }
+
+            const inputField = document.getElementById('chat-input');
+            const chatHistoryDiv = document.getElementById('chat-history');
+            const sendBtn = document.getElementById('chat-send-btn');
+            const userText = inputField.value.trim();
+
+            if (!userText) return;
+
+            const userMsgHTML = `
+                <div class="flex items-start gap-3 justify-end">
+                    <div class="bg-primary/20 text-white rounded-lg rounded-tr-none p-3 text-sm border border-primary/30 max-w-[80%]">
+                        ${userText}
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0 border border-slate-600">
+                        <i data-lucide="user" class="w-4 h-4 text-slate-300"></i>
+                    </div>
+                </div>
+            `;
+            chatHistoryDiv.insertAdjacentHTML('beforeend', userMsgHTML);
+            lucide.createIcons();
+            
+            inputField.value = '';
+            inputField.disabled = true;
+            sendBtn.disabled = true;
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+
+            const loadingId = 'loading-' + Date.now();
+            const loadingHTML = `
+                <div id="${loadingId}" class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
+                        <i data-lucide="bot" class="w-5 h-5 text-primary"></i>
+                    </div>
+                    <div class="bg-slate-800 rounded-lg rounded-tl-none p-3 text-sm text-slate-400 shadow-sm border border-slate-700/50 flex items-center gap-2">
+                        <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Thinking...
+                    </div>
+                </div>
+            `;
+            chatHistoryDiv.insertAdjacentHTML('beforeend', loadingHTML);
+            lucide.createIcons();
+            chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+
+            try {
+                conversationHistory.push({ role: "user", parts: [{ text: userText }] });
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${effectiveKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: conversationHistory
+                    })
+                });
+
+                if (!response.ok) throw new Error("Gemini API Error: " + response.status);
+
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text;
+                
+                conversationHistory.push({ role: "model", parts: [{ text: aiText }] });
+
+                document.getElementById(loadingId).remove();
+                
+                const aiMsgHTML = `
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0 border border-primary/30">
+                            <i data-lucide="bot" class="w-5 h-5 text-primary"></i>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg rounded-tl-none p-3 text-sm text-slate-300 shadow-sm border border-slate-700/50 markdown-prose">
+                            ${marked.parse(aiText)}
+                        </div>
+                    </div>
+                `;
+                chatHistoryDiv.insertAdjacentHTML('beforeend', aiMsgHTML);
+                lucide.createIcons();
+
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                alert("Chat failed: " + error.message);
+            } finally {
+                inputField.disabled = false;
+                sendBtn.disabled = false;
+                inputField.focus();
+                chatHistoryDiv.scrollTop = chatHistoryDiv.scrollHeight;
+            }
+        };
+
+        // --- CONTROLLABLE TEXT-TO-SPEECH (TTS) ---
+        
+        window.initAudio = async function() {
+            const effectiveKey = getEffectiveKey();
+            if (!effectiveKey) {
+                alert("API Key missing. Please check Settings.");
+                return;
+            }
+
+            const initBtn = document.getElementById('btn-init-read');
+            const outputDiv = document.getElementById('ai-output');
+            
+            const textToRead = outputDiv.innerText.substring(0, 800); 
+            
+            if (!textToRead || textToRead.length < 10) return;
+
+            initBtn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Loading...`;
+            lucide.createIcons();
+            initBtn.disabled = true;
+
+            try {
+                if (audioContext) {
+                   await audioContext.close();
+                }
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${effectiveKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: textToRead }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: {
+                                voiceConfig: {
+                                    prebuiltVoiceConfig: { voiceName: "Kore" }
+                                }
+                            }
+                        }
+                    })
+                });
+
+                const data = await response.json();
+                if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
+                    const audioContent = data.candidates[0].content.parts[0].inlineData.data;
+                    
+                    const arrayBuffer = Uint8Array.from(atob(audioContent), c => c.charCodeAt(0)).buffer;
+                    const audioData = new Int16Array(arrayBuffer);
+                    const float32Data = new Float32Array(audioData.length);
+                    for (let i = 0; i < audioData.length; i++) {
+                        float32Data[i] = audioData[i] / 32768.0; 
+                    }
+                    
+                    const buffer = audioContext.createBuffer(1, float32Data.length, 24000); 
+                    buffer.getChannelData(0).set(float32Data);
+                    
+                    audioSource = audioContext.createBufferSource();
+                    audioSource.buffer = buffer;
+                    audioSource.connect(audioContext.destination);
+                    
+                    audioSource.onended = () => stopAudio();
+                    audioSource.start();
+
+                    isAudioPlaying = true;
+                    updateAudioUI(true);
+
+                } else {
+                    throw new Error("No audio data returned");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("TTS Failed: " + error.message);
+                updateAudioUI(false);
+            }
+        };
+
+        window.toggleAudio = function() {
+            if (!audioContext) return;
+
+            if (audioContext.state === 'running') {
+                audioContext.suspend().then(() => {
+                    isAudioPlaying = false;
+                    document.getElementById('btn-play-pause').innerHTML = `<i data-lucide="play" class="w-3 h-3"></i>`;
+                    document.getElementById('audio-viz').classList.remove('playing');
+                    lucide.createIcons();
+                });
+            } else if (audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    isAudioPlaying = true;
+                    document.getElementById('btn-play-pause').innerHTML = `<i data-lucide="pause" class="w-3 h-3"></i>`;
+                    document.getElementById('audio-viz').classList.add('playing');
+                    lucide.createIcons();
+                });
+            }
+        };
+
+        window.stopAudio = function() {
+            if (audioSource) {
+                try { audioSource.stop(); } catch(e) {}
+                audioSource = null;
+            }
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            isAudioPlaying = false;
+            updateAudioUI(false);
+        };
+
+        function updateAudioUI(isPlaying) {
+            const controls = document.getElementById('audio-controls');
+            const initBtn = document.getElementById('btn-init-read');
+            const viz = document.getElementById('audio-viz');
+
+            if (isPlaying) {
+                initBtn.classList.add('hidden');
+                controls.classList.remove('hidden');
+                viz.classList.add('playing');
+                document.getElementById('btn-play-pause').innerHTML = `<i data-lucide="pause" class="w-3 h-3"></i>`;
+            } else {
+                controls.classList.add('hidden');
+                initBtn.classList.remove('hidden');
+                initBtn.disabled = false;
+                initBtn.innerHTML = `<i data-lucide="volume-2" class="w-3 h-3"></i> Read Aloud`;
+            }
+            lucide.createIcons();
+        }
+
+    </script>
+</body>
+</html>

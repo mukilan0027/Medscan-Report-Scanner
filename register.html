@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | MedScan AI</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        background: '#0f172a',
+                        surface: '#1e293b',
+                        primary: '#38bdf8',
+                        secondary: '#64748b',
+                        accent: '#8b5cf6',
+                    },
+                    animation: {
+                        'slide-in': 'slideIn 0.3s ease-out forwards',
+                        'fade-out': 'fadeOut 0.3s ease-in forwards',
+                    },
+                    keyframes: {
+                        slideIn: {
+                            '0%': { transform: 'translateX(100%)', opacity: '0' },
+                            '100%': { transform: 'translateX(0)', opacity: '1' },
+                        },
+                        fadeOut: {
+                            '0%': { opacity: '1' },
+                            '100%': { opacity: '0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; overflow: hidden; }
+        
+        .glass-card { 
+            background: rgba(30, 41, 59, 0.6); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        /* Floating Label Styles */
+        .floating-input:focus ~ label,
+        .floating-input:not(:placeholder-shown) ~ label,
+        .floating-select:valid ~ label {
+            top: -0.5rem;
+            left: 0.8rem;
+            font-size: 0.75rem;
+            color: #38bdf8;
+            background-color: rgba(30, 41, 59, 0.8);
+            padding: 0 0.4rem;
+            border-radius: 4px;
+        }
+
+        /* Static Background Orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -2;
+        }
+
+        /* Smooth Mouse Tracking Orb */
+        #cursor-orb {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 1200px;
+            height: 1200px;
+            background: radial-gradient(circle, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            transform: translate(-50%, -50%);
+            will-change: transform; 
+            animation: pulse-glow 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex items-center justify-center relative">
+
+    <!-- STATIC BACKGROUND -->
+    <div id="orb1" class="orb w-96 h-96 bg-primary/20 top-[-10%] left-[-10%]"></div>
+    <div id="orb2" class="orb w-80 h-80 bg-accent/20 bottom-[-10%] right-[-10%]"></div>
+    <div id="orb3" class="orb w-64 h-64 bg-blue-600/10 top-[40%] left-[40%]"></div>
+
+    <!-- MOUSE TRACKER -->
+    <div id="cursor-orb"></div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="w-full max-w-md px-6 relative z-10">
+        
+        <!-- Logo -->
+        <div class="text-center mb-8">
+            <a href="home.html" class="inline-flex items-center gap-2 group cursor-pointer">
+                <i data-lucide="activity" class="text-primary w-10 h-10 group-hover:drop-shadow-[0_0_8px_rgba(56,189,248,0.8)] transition-all"></i>
+                <span class="font-bold text-3xl tracking-tight text-white">MedScan<span class="text-primary">.AI</span></span>
+            </a>
+            <p class="mt-2 text-slate-400">Join us to decode your health data.</p>
+        </div>
+
+        <!-- Register Card -->
+        <div class="glass-card p-8 rounded-2xl">
+            <form id="registerForm" class="space-y-5">
+                
+                <!-- Name Input -->
+                <div class="relative group">
+                    <input type="text" id="name" required 
+                        class="floating-input peer w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-primary block p-4 placeholder-transparent transition-all outline-none" 
+                        placeholder="Full Name">
+                    <label for="name" class="absolute left-4 top-4 text-slate-400 text-sm transition-all duration-200 pointer-events-none peer-focus:text-primary">
+                        Full Name
+                    </label>
+                    <i data-lucide="user" class="absolute right-4 top-4 w-5 h-5 text-slate-500 peer-focus:text-primary transition-colors"></i>
+                </div>
+
+                <!-- Two Column Grid for Age & Blood -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Age Input -->
+                    <div class="relative group">
+                        <input type="number" id="age" required min="1" max="120"
+                            class="floating-input peer w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-primary block p-4 placeholder-transparent transition-all outline-none" 
+                            placeholder="Age">
+                        <label for="age" class="absolute left-4 top-4 text-slate-400 text-sm transition-all duration-200 pointer-events-none peer-focus:text-primary">
+                            Age
+                        </label>
+                        <i data-lucide="calendar" class="absolute right-4 top-4 w-5 h-5 text-slate-500 peer-focus:text-primary transition-colors"></i>
+                    </div>
+
+                    <!-- Blood Type Select -->
+                    <div class="relative group">
+                        <select id="bloodType" required 
+                            class="floating-select w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-primary block p-4 outline-none appearance-none">
+                            <option value="" disabled selected></option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                        <label class="absolute left-4 top-4 text-slate-400 text-sm transition-all duration-200 pointer-events-none">
+                            Blood Type
+                        </label>
+                        <i data-lucide="droplet" class="absolute right-4 top-4 w-5 h-5 text-slate-500 pointer-events-none"></i>
+                    </div>
+                </div>
+
+                <!-- Allergies Input (Added) -->
+                <div class="relative group">
+                    <input type="text" id="allergies" 
+                        class="floating-input peer w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-primary block p-4 placeholder-transparent transition-all outline-none" 
+                        placeholder="Allergies (Optional)">
+                    <label for="allergies" class="absolute left-4 top-4 text-slate-400 text-sm transition-all duration-200 pointer-events-none peer-focus:text-primary">
+                        Allergies (Optional)
+                    </label>
+                    <i data-lucide="alert-circle" class="absolute right-4 top-4 w-5 h-5 text-slate-500 peer-focus:text-primary transition-colors"></i>
+                </div>
+
+                <!-- Email Input -->
+                <div class="relative group">
+                    <input type="email" id="email" required 
+                        class="floating-input peer w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-primary block p-4 placeholder-transparent transition-all outline-none" 
+                        placeholder="Email Address">
+                    <label for="email" class="absolute left-4 top-4 text-slate-400 text-sm transition-all duration-200 pointer-events-none peer-focus:text-primary">
+                        Email Address
+                    </label>
+                    <i data-lucide="mail" class="absolute right-4 top-4 w-5 h-5 text-slate-500 peer-focus:text-primary transition-colors"></i>
+                </div>
+
+                <!-- Password Input -->
+                <div class="relative group">
+                    <input type="password" id="password" required minlength="6"
+                        class="floating-input peer w-full bg-slate-900/50 border border-slate-700 text-white text-sm rounded-xl focus:ring-2 focus:ring-primary focus:border-primary block p-4 placeholder-transparent transition-all outline-none" 
+                        placeholder="Password">
+                    <label for="password" class="absolute left-4 top-4 text-slate-400 text-sm transition-all duration-200 pointer-events-none peer-focus:text-primary">
+                        Password (min 6 chars)
+                    </label>
+                    <button type="button" onclick="togglePassword()" class="absolute right-4 top-4 text-slate-500 hover:text-white transition-colors focus:outline-none">
+                        <i id="eye-icon" data-lucide="eye" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <button type="submit" id="registerBtn" class="w-full text-white bg-gradient-to-r from-primary to-blue-600 hover:from-sky-400 hover:to-blue-500 focus:ring-4 focus:ring-blue-300 font-bold rounded-xl text-lg px-5 py-3.5 text-center transition-all shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(56,189,248,0.6)] transform hover:-translate-y-0.5 active:translate-y-0">
+                    Create Account
+                </button>
+                
+                <div class="text-sm font-medium text-slate-400 text-center">
+                    Already have an account? <a href="login.html" class="text-primary hover:text-sky-300 hover:underline">Login here</a>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <!-- LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyCXKUXTncKpX_eZOi2CLjSHsMKmTDbsdro",
+          authDomain: "medscan-ai-d8aca.firebaseapp.com",
+          projectId: "medscan-ai-d8aca",
+          storageBucket: "medscan-ai-d8aca.firebasestorage.app",
+          messagingSenderId: "268656020420",
+          appId: "1:268656020420:web:1fa116f03d17c9f335f291"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'medscan-ai-d8aca';
+
+        // --- INTERACTION LOGIC ---
+
+        // 1. Password Visibility Toggle
+        window.togglePassword = () => {
+            const input = document.getElementById('password');
+            const icon = document.getElementById('eye-icon');
+            
+            if (input.type === "password") {
+                input.type = "text";
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                input.type = "password";
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        };
+
+        // 2. Professional Smooth Mouse Tracking
+        const cursorOrb = document.getElementById('cursor-orb');
+        
+        let targetX = window.innerWidth / 2;
+        let targetY = window.innerHeight / 2;
+        let currentX = targetX;
+        let currentY = targetY;
+
+        document.addEventListener('mousemove', (e) => {
+            targetX = e.clientX;
+            targetY = e.clientY;
+        });
+
+        function animateOrb() {
+            const ease = 0.04; 
+            currentX += (targetX - currentX) * ease;
+            currentY += (targetY - currentY) * ease;
+            cursorOrb.style.transform = `translate(${currentX}px, ${currentY}px) translate(-50%, -50%)`;
+            requestAnimationFrame(animateOrb);
+        }
+        
+        animateOrb();
+
+        // 3. Toast Notification System
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-red-500/10 border-red-500/50 text-red-400';
+            const iconName = type === 'success' ? 'check-circle' : 'alert-circle';
+
+            toast.className = `flex items-center w-full max-w-xs p-4 space-x-3 text-sm border rounded-lg shadow-lg backdrop-blur-md animate-slide-in ${bgColor}`;
+            toast.innerHTML = `
+                <i data-lucide="${iconName}" class="w-5 h-5 flex-shrink-0"></i>
+                <span>${message}</span>
+            `;
+
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.classList.remove('animate-slide-in');
+                toast.classList.add('animate-fade-out');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // --- AUTH LOGIC ---
+        const registerForm = document.getElementById('registerForm');
+        
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const age = document.getElementById('age').value;
+            const bloodType = document.getElementById('bloodType').value;
+            const allergies = document.getElementById('allergies').value || "None"; // Capture allergies
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const btn = document.getElementById('registerBtn');
+            const originalBtnContent = btn.innerHTML;
+
+            // Loading State
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin inline mr-2"></i> Creating Account...`;
+            btn.classList.add('opacity-75', 'cursor-not-allowed');
+            btn.classList.remove('bg-gradient-to-r');
+            btn.disabled = true;
+            lucide.createIcons();
+
+            try {
+                // Create user
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Update profile name
+                await updateProfile(user, { displayName: name });
+
+                // Initialize detailed profile in Firestore
+                await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), {
+                    fullName: name,
+                    email: email,
+                    age: age,
+                    bloodType: bloodType,
+                    allergies: allergies,
+                    joinedAt: new Date().toISOString(),
+                    patientId: `#MS-${Math.floor(1000 + Math.random() * 9000)}`
+                });
+
+                // Success State
+                btn.innerHTML = `<i data-lucide="check" class="w-5 h-5 inline mr-2"></i> Success!`;
+                btn.classList.add('bg-green-500', 'hover:bg-green-600');
+                lucide.createIcons();
+
+                showToast("Account created successfully!", "success");
+
+                // Store token & Redirect
+                const token = await user.getIdToken();
+                localStorage.setItem('medscan_token', token);
+                
+                setTimeout(() => {
+                    window.location.href = 'report.html';
+                }, 1500);
+
+            } catch (error) {
+                console.error("Registration Error:", error);
+                
+                // Error UI
+                btn.innerHTML = '<i data-lucide="x-circle" class="w-5 h-5 mr-2"></i> Registration Failed';
+                btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                lucide.createIcons();
+
+                // User-friendly error messages
+                let message = "An unexpected error occurred.";
+                if (error.code === 'auth/email-already-in-use') message = "This email is already registered.";
+                if (error.code === 'auth/weak-password') message = "Password should be at least 6 characters.";
+                if (error.code === 'auth/invalid-email') message = "Please enter a valid email address.";
+
+                showToast(message, "error");
+
+                // Reset Button
+                setTimeout(() => {
+                    btn.innerHTML = originalBtnContent;
+                    btn.classList.remove('bg-red-500', 'hover:bg-red-600', 'bg-green-500', 'hover:bg-green-600', 'opacity-75', 'cursor-not-allowed');
+                    btn.classList.add('bg-gradient-to-r');
+                    btn.disabled = false;
+                    lucide.createIcons();
+                }, 3000);
+            }
+        });
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
